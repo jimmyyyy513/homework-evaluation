@@ -1,0 +1,112 @@
+#include <stdio.h>
+#include <math.h>
+
+#define MAX_MEMBERS 5
+#define CATEGORY_COUNT 9
+
+// Enum for training categories
+enum Category {
+    PHYSICAL = 0, KNOWLEDGE, SELF_MGMT, TEAMWORK, KOREAN,
+    VOCAL, DANCE, VISUAL, ACTING
+};
+
+// Category names (must match enum order)
+const char category01_arr[CATEGORY_COUNT][20] = {
+    "Physical Strength", "Knowledge", "Self-Management", "Teamwork",
+    "Korean Language", "Vocal", "Dance", "Visual", "Acting"
+};
+
+// Member scores: scores01_arr[member][category]
+int scores01_arr[MAX_MEMBERS][CATEGORY_COUNT];
+
+// Category average
+int avg01_arr[CATEGORY_COUNT];
+
+int main() {
+    int team_size, i, j;
+    int min_score, pass_score;
+    int total_score = 0;
+
+    printf("Enter number of members (max %d): ", MAX_MEMBERS);
+    scanf("%d", &team_size);
+    if (team_size < 1 || team_size > MAX_MEMBERS) {
+        printf("❌ Invalid team size.\n");
+        return 1;
+    }
+
+    printf("Set team passing average score (0-100): ");
+    scanf("%d", &pass_score);
+
+    printf("Set minimum individual score (0-100): ");
+    scanf("%d", &min_score);
+
+    // Input scores for each member
+    for (i = 0; i < team_size; i++) {
+        printf("\nEnter scores for Member %d:\n", i + 1);
+        for (j = 0; j < CATEGORY_COUNT; j++) {
+            printf("- %s: ", category01_arr[j]);
+            scanf("%d", &scores01_arr[i][j]);
+
+            // Check minimum individual score
+            if (scores01_arr[i][j] < min_score) {
+                printf("\nMinimum required score is %d.\n", min_score);
+                printf("⚠️ Entire team must retake %s.\n", category01_arr[j]);
+                return 0;
+            }
+        }
+    }
+
+    // Calculate average per category
+    for (j = 0; j < CATEGORY_COUNT; j++) {
+        int sum = 0;
+        for (i = 0; i < team_size; i++) {
+            sum += scores01_arr[i][j];
+        }
+        avg01_arr[j] = sum / team_size; // Truncate decimals
+        total_score += avg01_arr[j];
+    }
+
+    printf("\n📊 Category Averages:\n");
+    for (j = 0; j < CATEGORY_COUNT; j++) {
+        printf("- %s: %d\n", category01_arr[j], avg01_arr[j]);
+    }
+
+    printf("\n📈 Team Total Score: %d / 100\n", total_score);
+
+    // Debut decision (switch inside range)
+    printf("\n📢 Debut Status:\n");
+    switch (total_score / 5) { // Simplifies range switching
+        case 19: // 95–100
+        case 20:
+            printf("🎉 Congratulations! Your stage debut is confirmed!\n");
+            break;
+        case 18: // 90–94
+            printf("✅ The Debut Certification Team will hold a final evaluation meeting to make a decision.\n");
+            break;
+        case 16: // 80–89
+        case 17: {
+            // Find 3 lowest categories
+            int idx1 = 0, idx2 = 1, idx3 = 2;
+            for (j = 0; j < CATEGORY_COUNT; j++) {
+                int curr = avg01_arr[j];
+                if (avg01_arr[j] < avg01_arr[idx1] ||
+                    (idx1 == idx2 && j > 2)) idx1 = j;
+            }
+            for (j = 0; j < CATEGORY_COUNT; j++) {
+                if (j != idx1 &&
+                    (avg01_arr[j] < avg01_arr[idx2] || idx2 == idx3)) idx2 = j;
+            }
+            for (j = 0; j < CATEGORY_COUNT; j++) {
+                if (j != idx1 && j != idx2 &&
+                    avg01_arr[j] < avg01_arr[idx3]) idx3 = j;
+            }
+            printf("🔁 Retake the three lowest-scoring categories (%s, %s, %s) after 30 days.\n",
+                   category01_arr[idx1], category01_arr[idx2], category01_arr[idx3]);
+            break;
+        }
+        default:
+            printf("❌ Team performance insufficient. Full retest required.\n");
+    }
+
+    return 0;
+}
