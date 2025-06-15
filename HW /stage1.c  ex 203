@@ -1,0 +1,235 @@
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+#define MAX_MEMBERS 100
+#define MAX_NAME_LENGTH 50
+#define DAYS_IN_WEEK 6
+#define EXERCISE_TYPES 5
+#define MAX_EXERCISES_PER_TYPE 3
+
+typedef struct {
+    char name[MAX_NAME_LENGTH];
+    char nickname[MAX_NAME_LENGTH];
+    char routine[DAYS_IN_WEEK][2][MAX_NAME_LENGTH]; // [day][0] = cardio, [day][1] = strength/core
+    int core_day; // which day has core exercise (0-5 for Mon-Sat)
+} Member;
+
+Member milliways_members[MAX_MEMBERS];
+int member_count = 0;
+
+const char *exercise_types[EXERCISE_TYPES][MAX_EXERCISES_PER_TYPE] = {
+    {"Running", "Cycling", "Fast Walking"},         // Cardio
+    {"Push-ups", "Squats", ""},                     // Full-body Strength
+    {"Leg Press", "Leg Curl", ""},                  // Lower-body Strength
+    {"Pull-ups", "Chin-ups", ""},                   // Upper-body Strength
+    {"Plank", "Crunches", ""}                       // Core Strength
+};
+
+const char *days_of_week[DAYS_IN_WEEK] = {
+    "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
+};
+
+void displayMemberList() {
+    printf("\nMember List:\n");
+    for (int i = 0; i < member_count; i++) {
+        printf("%d. %s (%s)\n", i + 1, milliways_members[i].name, milliways_members[i].nickname);
+    }
+    printf("\n");
+}
+
+void setExerciseRoutine() {
+    if (member_count == 0) {
+        printf("No members available. Please add members first.\n");
+        return;
+    }
+
+    displayMemberList();
+
+    int member_index;
+    printf("Select member (1-%d): ", member_count);
+    scanf("%d", &member_index);
+    getchar(); // consume newline
+
+    if (member_index < 1 || member_index > member_count) {
+        printf("Invalid member selection.\n");
+        return;
+    }
+
+    Member *member = &milliways_members[member_index - 1];
+    printf("\nSetting workout routine for %s (%s):\n", member->name, member->nickname);
+
+    // Reset core day
+    member->core_day = -1;
+
+    for (int day = 0; day < DAYS_IN_WEEK; day++) {
+        printf("\n%s:\n", days_of_week[day]);
+
+        // Cardio selection
+        printf("Select Cardio exercise:\n");
+        for (int i = 0; i < MAX_EXERCISES_PER_TYPE && exercise_types[0][i][0] != '\0'; i++) {
+            printf("%d. %s\n", i + 1, exercise_types[0][i]);
+        }
+        int cardio_choice;
+        printf("Choice (1-%d): ", MAX_EXERCISES_PER_TYPE);
+        scanf("%d", &cardio_choice);
+        getchar(); // consume newline
+        strcpy(member->routine[day][0], exercise_types[0][cardio_choice - 1]);
+
+        // Strength/Core selection
+        printf("\nSelect Strength or Core exercise:\n");
+        for (int type = 1; type < EXERCISE_TYPES; type++) {
+            for (int i = 0; i < MAX_EXERCISES_PER_TYPE && exercise_types[type][i][0] != '\0'; i++) {
+                printf("%d. %s (%s)\n", 
+                    (type-1)*MAX_EXERCISES_PER_TYPE + i + 1, 
+                    exercise_types[type][i],
+                    (type == 4) ? "Core" : "Strength");
+            }
+        }
+
+        int strength_choice;
+        printf("Choice (1-%d): ", 8); // Total strength+core options
+        scanf("%d", &strength_choice);
+        getchar(); // consume newline
+
+        // Determine which exercise was selected
+        int type = 1 + (strength_choice - 1) / MAX_EXERCISES_PER_TYPE;
+        int exercise = (strength_choice - 1) % MAX_EXERCISES_PER_TYPE;
+
+        strcpy(member->routine[day][1], exercise_types[type][exercise]);
+
+        // Check if core was selected
+        if (type == 4) { // Core strength
+            if (member->core_day != -1) {
+                printf("Error: Core exercise already assigned for %s.\n", days_of_week[member->core_day]);
+                day--; // Repeat this day
+                continue;
+            }
+            member->core_day = day;
+        }
+    }
+
+    printf("\nWorkout routine set successfully for %s!\n", member->name);
+}
+
+void getExerciseRoutine() {
+    if (member_count == 0) {
+        printf("No members available. Please add members first.\n");
+        return;
+    }
+
+    char search_name[MAX_NAME_LENGTH];
+    printf("Enter member name or nickname: ");
+    fgets(search_name, MAX_NAME_LENGTH, stdin);
+    search_name[strcspn(search_name, "\n")] = '\0'; // Remove newline
+
+    int found_index = -1;
+    for (int i = 0; i < member_count; i++) {
+        if (strcasecmp(milliways_members[i].name, search_name) == 0 || 
+            strcasecmp(milliways_members[i].nickname, search_name) == 0) {
+            found_index = i;
+            break;
+        }
+    }
+
+    if (found_index == -1) {
+        printf("Member not found.\n");
+        return;
+    }
+
+    Member *member = &milliways_members[found_index];
+    printf("\nWorkout Routine for %s (%s):\n", member->name, member->nickname);
+    printf("--------------------------------------------------\n");
+
+    for (int day = 0; day < DAYS_IN_WEEK; day++) {
+        printf("%s:\n", days_of_week[day]);
+        printf("  Cardio: %s\n", member->routine[day][0]);
+        printf("  %s: %s\n", 
+            (day == member->core_day) ? "Core" : "Strength",
+            member->routine[day][1]);
+        printf("--------------------------------------------------\n");
+    }
+}
+
+void physicalStrengthMenu() {
+    int choice;
+    do {
+        printf("\nPhysical Strength & Knowledge Menu:\n");
+        printf("A. Collect Fitness Data\n");
+        printf("B. View Fitness Data\n");
+        printf("C. Set Basic Workout Routine\n");
+        printf("D. View Basic Workout Routine\n");
+        printf("X. Return to Main Menu\n");
+        printf("Enter your choice: ");
+
+        choice = getchar();
+        getchar(); // consume newline
+
+        switch (toupper(choice)) {
+            case 'A':
+                // collectFitnessData();
+                break;
+            case 'B':
+                // viewFitnessData();
+                break;
+            case 'C':
+                setExerciseRoutine();
+                break;
+            case 'D':
+                getExerciseRoutine();
+                break;
+            case 'X':
+                printf("Returning to main menu.\n");
+                break;
+            default:
+                printf("Invalid choice. Please try again.\n");
+        }
+    } while (toupper(choice) != 'X');
+}
+
+void addSampleMembers() {
+    // Add some sample members for testing
+    strcpy(milliways_members[0].name, "Arthur Dent");
+    strcpy(milliways_members[0].nickname, "Earthman");
+    member_count++;
+
+    strcpy(milliways_members[1].name, "Ford Prefect");
+    strcpy(milliways_members[1].nickname, "Betelgeusian");
+    member_count++;
+
+    strcpy(milliways_members[2].name, "Zaphod Beeblebrox");
+    strcpy(milliways_members[2].nickname, "President");
+    member_count++;
+}
+
+int main() {
+    addSampleMembers();
+
+    int choice;
+    do {
+        printf("\nMilliways Fitness Club Main Menu:\n");
+        printf("1. Physical Strength & Knowledge\n");
+        printf("2. Mental Strength & Knowledge\n");
+        printf("3. Exit\n");
+        printf("Enter your choice: ");
+
+        scanf("%d", &choice);
+        getchar(); // consume newline
+
+        switch (choice) {
+            case 1:
+                physicalStrengthMenu();
+                break;
+            case 2:
+                // mentalStrengthMenu();
+                break;
+            case 3:
+                printf("Exiting program. Thanks for using Milliways Fitness Club!\n");
+                break;
+            default:
+                printf("Invalid choice. Please try again.\n");
+        }
+    } while (choice != 3);
+
+    return 0;
+}
