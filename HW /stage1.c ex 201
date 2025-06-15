@@ -1,0 +1,149 @@
+#include <stdio.h>
+#include <string.h>
+
+// Constants
+#define STAGE_COUNT 8
+#define MENU_COUNT 3
+
+// One-dimensional arrays (not real 2D arrays per constraint)
+char main_menu[MENU_COUNT][30] = {
+    "I. Audition Management",
+    "II. Training",
+    "III. Debut"
+};
+
+char training_menu[STAGE_COUNT][40] = {
+    "1. Physical Strength & Knowledge",
+    "2. Self-Management & Teamwork",
+    "3. Language & Pronunciation",
+    "4. Vocal",
+    "5. Dance",
+    "6. Visual & Image",
+    "7. Acting & Stage Performance",
+    "8. Fan Communication"
+};
+
+// Track evaluation results: 'N' (not attempted), 'P', or 'F'
+char evaluation_result[STAGE_COUNT] = { 'N','N','N','N','N','N','N','N' };
+
+// Function Prototypes
+void show_main_menu();
+void handle_main_menu();
+void training_menu_function();
+void evaluate_stage(int stage_index);
+
+int main() {
+    handle_main_menu();
+    return 0;
+}
+
+// Displays Main Menu
+void show_main_menu() {
+    printf("\n=== Magrathea System: Main Menu ===\n");
+    for (int i = 0; i < MENU_COUNT; i++) {
+        printf("%d. %s\n", i + 1, main_menu[i]);
+    }
+    printf("Enter 0, Q, or q to quit.\n");
+}
+
+// Handles Main Menu Navigation
+void handle_main_menu() {
+    char input[10];
+    int choice;
+
+    while (1) {
+        show_main_menu();
+        printf("\nSelect a menu option: ");
+        scanf(" %s", input);
+
+        if (input[0] == '0' || input[0] == 'q' || input[0] == 'Q') {
+            printf("Exiting program. Goodbye!\n");
+            break;
+        }
+
+        choice = input[0] - '0';
+        switch (choice) {
+            case 1:
+                printf("\n[AUDITION MANAGEMENT]\n(Feature not implemented)\n");
+                break;
+            case 2:
+                training_menu_function();
+                break;
+            case 3:
+                printf("\n[DEBUT]\n(Feature not implemented)\n");
+                break;
+            default:
+                printf("Invalid menu option.\n");
+        }
+    }
+}
+
+// Training Menu Logic
+void training_menu_function() {
+    char input[10];
+    int choice;
+
+    while (1) {
+        printf("\n=== Training Menu ===\n");
+        for (int i = 0; i < STAGE_COUNT; i++) {
+            printf("%d. %s [%c]\n", i + 1, training_menu[i], evaluation_result[i]);
+        }
+        printf("Enter 0 to return to Main Menu.\n");
+        printf("Select a training stage (1-8): ");
+        scanf(" %s", input);
+
+        if (input[0] == '0') return;
+
+        choice = input[0] - '0';
+        if (choice < 1 || choice > STAGE_COUNT) {
+            printf("Invalid training stage.\n");
+            continue;
+        }
+
+        int idx = choice - 1;
+
+        // Check if already completed
+        if (evaluation_result[idx] == 'P') {
+            printf("Stage already passed. Cannot retake.\n");
+            continue;
+        }
+
+        // Enforce order for Stage 1 and 2
+        if (idx > 0 && idx < 2 && evaluation_result[idx - 1] != 'P') {
+            printf("You must pass previous stage first.\n");
+            continue;
+        }
+
+        if (idx >= 2) {
+            if (evaluation_result[0] != 'P' || evaluation_result[1] != 'P') {
+                printf("You must pass Stage 1 and 2 before accessing this.\n");
+                continue;
+            }
+        }
+
+        // Prompt for evaluation
+        char answer;
+        printf("Would you like to enter the evaluation result? (Y/N): ");
+        scanf(" %c", &answer);
+        if (answer == 'Y' || answer == 'y') {
+            evaluate_stage(idx);
+        } else {
+            printf("Returning to training menu...\n");
+        }
+    }
+}
+
+// Evaluation Logic
+void evaluate_stage(int stage_index) {
+    char pass;
+    printf("Did you complete the training and pass the certification? (P/F): ");
+    scanf(" %c", &pass);
+
+    if (pass == 'P' || pass == 'p') {
+        evaluation_result[stage_index] = 'P';
+        printf("Stage marked as PASSED.\n");
+    } else {
+        evaluation_result[stage_index] = 'F';
+        printf("Stage marked as FAILED.\n");
+    }
+}
