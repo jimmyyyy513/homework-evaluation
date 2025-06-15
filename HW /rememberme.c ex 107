@@ -1,0 +1,149 @@
+#include <stdio.h>
+#include <string.h>
+
+#define MAX_CANDIDATES 6
+#define MAX_MESSAGES 10
+#define MAX_LENGTH 100
+
+// Immutable memorial array: name,audition,id,email
+const char memorial01_arr[MAX_CANDIDATES][MAX_LENGTH] = {
+    "Helena Silva,milliways,345678,helena@example.com",
+    "Liam Wilson,milliways,456789,liam@example.com",
+    "Aria Lee,milliways,567890,aria@example.com",
+    "Noah Davis,milliways,678901,noah@example.com"
+};
+
+// Rolling paper messages (JSON-style strings)
+char rollingpp01_arr[MAX_MESSAGES][MAX_LENGTH];
+int message_count = 0;
+
+// Extract name from memorial entry
+void extract_name(const char *memorial_entry, char *name) {
+    int i = 0;
+    while (memorial_entry[i] != ',' && memorial_entry[i] != '\0') {
+        name[i] = memorial_entry[i];
+        i++;
+    }
+    name[i] = '\0';
+}
+
+// Extract email from memorial entry
+void extract_email(const char *memorial_entry, char *email) {
+    int i = 0, commas = 0, idx = 0;
+    while (memorial_entry[i] != '\0') {
+        if (memorial_entry[i] == ',') commas++;
+        if (commas == 3) {
+            i++;
+            break;
+        }
+        i++;
+    }
+    while (memorial_entry[i] != '\0') {
+        email[idx++] = memorial_entry[i++];
+    }
+    email[idx] = '\0';
+}
+
+// Show failed candidates
+void show_failed_candidates() {
+    printf("Unsuccessful Candidates:\n");
+    for (int i = 0; i < 4; i++) {
+        char name[MAX_LENGTH];
+        extract_name(memorial01_arr[i], name);
+        printf("%d. %s\n", i + 1, name);
+    }
+}
+
+// Send rolling paper
+void send_rolling_paper() {
+    char sender[MAX_LENGTH], message[MAX_LENGTH];
+    int recipient_index;
+
+    show_failed_candidates();
+    printf("Select recipient by number (1-4): ");
+    scanf("%d", &recipient_index);
+    if (recipient_index < 1 || recipient_index > 4) {
+        printf("Invalid selection.\n");
+        return;
+    }
+
+    getchar(); // Consume leftover newline
+    printf("Sender Name: ");
+    fgets(sender, MAX_LENGTH, stdin);
+    sender[strcspn(sender, "\n")] = '\0';
+
+    printf("Message: ");
+    fgets(message, MAX_LENGTH, stdin);
+    message[strcspn(message, "\n")] = '\0';
+
+    char json_message[MAX_LENGTH];
+    snprintf(json_message, MAX_LENGTH, "\"%s\": \"%s\"", sender, message);
+    strcpy(rollingpp01_arr[message_count++], json_message);
+
+    char recipient_email[MAX_LENGTH];
+    extract_email(memorial01_arr[recipient_index - 1], recipient_email);
+    printf("Recipient Email: %s\n", recipient_email);
+    printf("Send this message via email? (Y/N): ");
+    char choice;
+    scanf(" %c", &choice);
+
+    if (choice == 'Y' || choice == 'y') {
+        printf("Email has been sent.\n");
+    } else {
+        printf("Email sending cancelled.\n");
+    }
+}
+
+// View messages for a candidate
+void view_messages_for_candidate() {
+    int recipient_index;
+    show_failed_candidates();
+    printf("Select recipient by number to view messages (1-4): ");
+    scanf("%d", &recipient_index);
+
+    if (recipient_index < 1 || recipient_index > 4) {
+        printf("Invalid selection.\n");
+        return;
+    }
+
+    char recipient_name[MAX_LENGTH];
+    extract_name(memorial01_arr[recipient_index - 1], recipient_name);
+    printf("Messages for %s:\n", recipient_name);
+
+    if (message_count == 0) {
+        printf("No messages yet.\n");
+        return;
+    }
+
+    for (int i = 0; i < message_count; i++) {
+        printf("- %s\n", rollingpp01_arr[i]);
+    }
+}
+
+int main() {
+    int option;
+    while (1) {
+        printf("\n===========================\n");
+        printf(" Rolling Paper Main Menu\n");
+        printf("===========================\n");
+        printf("1. Send Message\n");
+        printf("2. View Messages\n");
+        printf("3. Exit\n");
+        printf("> Select Option: ");
+        scanf("%d", &option);
+
+        switch (option) {
+            case 1:
+                send_rolling_paper();
+                break;
+            case 2:
+                view_messages_for_candidate();
+                break;
+            case 3:
+                printf("Exiting program.\n");
+                return 0;
+            default:
+                printf("Invalid option. Try again.\n");
+        }
+    }
+}
