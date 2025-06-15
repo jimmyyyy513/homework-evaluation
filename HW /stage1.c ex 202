@@ -1,0 +1,172 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#define MEMBER_COUNT 5
+#define TEST_COUNT 7
+
+char *training_menu[] = {
+    "1. Physical Strength & Knowledge",
+    "2. Self-Management & Teamwork",
+    "3. Language & Pronunciation",
+    "4. Vocal",
+    "5. Dance",
+    "6. Visual & Image",
+    "7. Acting & Stage Performance",
+    "8. Fan Communication"
+};
+
+char *fitness_tests[] = {
+    "1-Mile Run", "Speed Sprint", "Push-ups", "Squats",
+    "Arm Strength", "Swimming", "Weightlifting"
+};
+
+char member_names[MEMBER_COUNT][30] = {
+    "Minji", "Hanni", "Danielle", "Haerin", "Hyein"
+};
+char member_nicks[MEMBER_COUNT][20] = {
+    "min", "han", "dan", "rae", "hye"
+};
+
+char training_status[8] = {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '};
+float health_scores[MEMBER_COUNT][TEST_COUNT];
+
+void setHealth() {
+    char input[100];
+    for (int i = 0; i < MEMBER_COUNT; i++) {
+        printf("Enter 7 fitness scores for %s (%s), comma-separated:\n", member_names[i], member_nicks[i]);
+        fgets(input, sizeof(input), stdin);
+
+        char *token = strtok(input, ",\n");
+        int j = 0;
+        while (token != NULL && j < TEST_COUNT) {
+            health_scores[i][j] = atof(token);
+            token = strtok(NULL, ",\n");
+            j++;
+        }
+    }
+    printf("All fitness data recorded.\n");
+}
+
+void getHealth() {
+    char nick[20];
+    printf("Enter nickname to view fitness data (or 'all' to view all): ");
+    scanf("%s", nick);
+    getchar(); // Consume newline
+
+    if (strcmp(nick, "all") == 0) {
+        for (int i = 0; i < MEMBER_COUNT; i++) {
+            printf("%s (%s): ", member_names[i], member_nicks[i]);
+            for (int j = 0; j < TEST_COUNT; j++) {
+                printf("%.2f ", health_scores[i][j]);
+            }
+            printf("\n");
+        }
+    } else {
+        int found = 0;
+        for (int i = 0; i < MEMBER_COUNT; i++) {
+            if (strcmp(nick, member_nicks[i]) == 0) {
+                printf("%s (%s):\n", member_names[i], member_nicks[i]);
+                for (int j = 0; j < TEST_COUNT; j++) {
+                    printf("%s: %.2f\n", fitness_tests[j], health_scores[i][j]);
+                }
+                found = 1;
+                break;
+            }
+        }
+        if (!found) {
+            printf("Nickname not found.\n");
+        }
+    }
+}
+
+void stage1_menu() {
+    char choice;
+    while (1) {
+        printf("\n[1. Physical Strength & Knowledge]\n");
+        printf("A. Enter Fitness Data\n");
+        printf("B. View Fitness Data\n");
+        printf("Q. Return to Training Menu\n");
+        printf("Select: ");
+        scanf(" %c", &choice);
+        getchar();
+
+        switch (choice) {
+            case 'A':
+            case 'a':
+                setHealth();
+                break;
+            case 'B':
+            case 'b':
+                getHealth();
+                break;
+            case 'Q':
+            case 'q':
+                return;
+            default:
+                printf("Invalid input.\n");
+        }
+    }
+}
+
+void training_menu() {
+    int stage;
+    while (1) {
+        printf("\n[II. Training Menu]\n");
+        for (int i = 0; i < 8; i++) {
+            printf("%d. %s [%c]\n", i + 1, training_menu[i], training_status[i]);
+        }
+        printf("0. Return to Main Menu\n");
+        printf("Select training stage: ");
+        scanf("%d", &stage);
+        getchar();
+
+        if (stage == 0) return;
+        if (stage == 1) {
+            stage1_menu();
+        } else {
+            printf("Stage not implemented yet.\n");
+        }
+    }
+}
+
+void main_menu() {
+    char choice;
+    while (1) {
+        printf("\n[Main Menu]\n");
+        printf("I. Audition Management\n");
+        printf("II. Training\n");
+        printf("III. Debut\n");
+        printf("Q. Quit\n");
+        printf("Select: ");
+        scanf(" %c", &choice);
+        getchar();
+
+        switch (choice) {
+            case 'I':
+            case 'i':
+                printf("Audition Management not implemented.\n");
+                break;
+            case 'II':
+            case 'i':
+                training_menu();
+                break;
+            case 'III':
+            case 'i':
+                printf("Debut not implemented.\n");
+                break;
+            case 'Q':
+            case 'q':
+            case '0':
+                printf("Program terminated.\n");
+                return;
+            default:
+                printf("Invalid selection.\n");
+        }
+    }
+}
+
+int main() {
+    main_menu();
+    return 0;
+}
