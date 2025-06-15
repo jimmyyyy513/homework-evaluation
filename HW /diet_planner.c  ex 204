@@ -1,0 +1,351 @@
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdbool.h>
+
+#define MAX_MEMBERS 100
+#define MAX_NAME_LENGTH 50
+#define MAX_ALLERGIES 5
+#define MAX_INGREDIENTS 20
+#define DAYS_IN_WEEK 6
+#define MEALS_PER_DAY 3
+#define EXERCISE_TYPES 5
+#define MAX_EXERCISES_PER_TYPE 3
+
+typedef enum {
+    FLEXITARIAN,
+    VEGETARIAN,
+    VEGAN,
+    PESCETARIAN,
+    OMNIVORE,
+    DIET_TYPE_COUNT
+} DietType;
+
+const char *diet_type_names[DIET_TYPE_COUNT] = {
+    "Flexitarian",
+    "Vegetarian",
+    "Vegan",
+    "Pescetarian",
+    "Omnivore"
+};
+
+typedef struct {
+    char name[MAX_NAME_LENGTH];
+    bool allowed;
+} Ingredient;
+
+typedef struct {
+    char name[MAX_NAME_LENGTH];
+    int calories;
+    Ingredient ingredients[MAX_INGREDIENTS];
+    int ingredient_count;
+} Meal;
+
+typedef struct {
+    char name[MAX_NAME_LENGTH];
+    char nickname[MAX_NAME_LENGTH];
+    DietType diet_type;
+    char allergies[MAX_ALLERGIES][MAX_NAME_LENGTH];
+    int allergy_count;
+    char routine[DAYS_IN_WEEK][2][MAX_NAME_LENGTH];
+    int core_day;
+    Meal weekly_menu[DAYS_IN_WEEK][MEALS_PER_DAY];
+} Member;
+
+Member milliways_members[MAX_MEMBERS];
+int member_count = 0;
+
+const char *exercise_types[EXERCISE_TYPES][MAX_EXERCISES_PER_TYPE] = {
+    {"Running", "Cycling", "Fast Walking"},
+    {"Push-ups", "Squats", ""},
+    {"Leg Press", "Leg Curl", ""},
+    {"Pull-ups", "Chin-ups", ""},
+    {"Plank", "Crunches", ""}
+};
+
+const char *days_of_week[DAYS_IN_WEEK] = {
+    "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
+};
+
+const char *meals_of_day[MEALS_PER_DAY] = {
+    "Breakfast", "Lunch", "Dinner"
+};
+
+void displayMemberList() {
+    printf("\nMember List:\n");
+    for (int i = 0; i < member_count; i++) {
+        printf("%d. %s (%s) - %s\n", i + 1, 
+               milliways_members[i].name, 
+               milliways_members[i].nickname,
+               diet_type_names[milliways_members[i].diet_type]);
+    }
+    printf("\n");
+}
+
+void setDietPlan() {
+    if (member_count == 0) {
+        printf("No members available. Please add members first.\n");
+        return;
+    }
+
+    displayMemberList();
+
+    int member_index;
+    printf("Select member (1-%d): ", member_count);
+    scanf("%d", &member_index);
+    getchar();
+
+    if (member_index < 1 || member_index > member_count) {
+        printf("Invalid member selection.\n");
+        return;
+    }
+
+    Member *member = &milliways_members[member_index - 1];
+    printf("\nSetting diet plan for %s (%s, %s):\n", 
+           member->name, member->nickname, diet_type_names[member->diet_type]);
+
+    // Display allergies
+    if (member->allergy_count > 0) {
+        printf("\nAllergies: ");
+        for (int i = 0; i < member->allergy_count; i++) {
+            printf("%s", member->allergies[i]);
+            if (i < member->allergy_count - 1) printf(", ");
+        }
+        printf("\n");
+    }
+
+    for (int day = 0; day < DAYS_IN_WEEK; day++) {
+        printf("\n%s:\n", days_of_week[day]);
+        for (int meal = 0; meal < MEALS_PER_DAY; meal++) {
+            printf("\n%s\n", meals_of_day[meal]);
+            
+            printf("Enter meal name: ");
+            fgets(member->weekly_menu[day][meal].name, MAX_NAME_LENGTH, stdin);
+            member->weekly_menu[day][meal].name[strcspn(member->weekly_menu[day][meal].name, "\n")] = '\0';
+            
+            printf("Enter calories: ");
+            scanf("%d", &member->weekly_menu[day][meal].calories);
+            getchar();
+            
+            printf("Enter ingredients (comma separated): ");
+            char ingredients_input[500];
+            fgets(ingredients_input, sizeof(ingredients_input), stdin);
+            
+            char *token = strtok(ingredients_input, ",");
+            member->weekly_menu[day][meal].ingredient_count = 0;
+            
+            while (token != NULL && member->weekly_menu[day][meal].ingredient_count < MAX_INGREDIENTS) {
+                // Trim whitespace
+                while (*token == ' ') token++;
+                char *end = token + strlen(token) - 1;
+                while (end > token && *end == ' ') end--;
+                *(end + 1) = '\0';
+                
+                strcpy(member->weekly_menu[day][meal].ingredients[member->weekly_menu[day][meal].ingredient_count].name, token);
+                
+                // Check if ingredient is allowed based on diet type
+                bool allowed = true;
+                if (member->diet_type == VEGAN) {
+                    if (strcasecmp(token, "meat") == 0 || strcasecmp(token, "dairy") == 0 || 
+                        strcasecmp(token, "eggs") == 0 || strcasecmp(token, "honey") == 0) {
+                        allowed = false;
+                    }
+                } else if (member->diet_type == VEGETARIAN) {
+                    if (strcasecmp(token, "meat") == 0 || strcasecmp(token, "fish") == 0) {
+                        allowed = false;
+                    }
+                } else if (member->diet_type == PESCETARIAN) {
+                    if (strcasecmp(token, "meat") == 0) {
+                        allowed = false;
+                    }
+                }
+                
+                // Check for allergies
+                for (int i = 0; i < member->allergy_count; i++) {
+                    if (strcasecmp(token, member->allergies[i]) == 0) {
+                        allowed = false;
+                        break;
+                    }
+                }
+                
+                member->weekly_menu[day][meal].ingredients[member->weekly_menu[day][meal].ingredient_count].allowed = allowed;
+                member->weekly_menu[day][meal].ingredient_count++;
+                
+                token = strtok(NULL, ",");
+            }
+        }
+    }
+
+    printf("\nDiet plan set successfully for %s!\n", member->name);
+}
+
+void viewDietPlan() {
+    if (member_count == 0) {
+        printf("No members available. Please add members first.\n");
+        return;
+    }
+
+    char search_name[MAX_NAME_LENGTH];
+    printf("Enter member name or nickname: ");
+    fgets(search_name, MAX_NAME_LENGTH, stdin);
+    search_name[strcspn(search_name, "\n")] = '\0';
+
+    int found_index = -1;
+    for (int i = 0; i < member_count; i++) {
+        if (strcasecmp(milliways_members[i].name, search_name) == 0 || 
+            strcasecmp(milliways_members[i].nickname, search_name) == 0) {
+            found_index = i;
+            break;
+        }
+    }
+
+    if (found_index == -1) {
+        printf("Member not found.\n");
+        return;
+    }
+
+    Member *member = &milliways_members[found_index];
+    printf("\nDiet Plan for %s (%s, %s):\n", 
+           member->name, member->nickname, diet_type_names[member->diet_type]);
+    
+    if (member->allergy_count > 0) {
+        printf("Allergies: ");
+        for (int i = 0; i < member->allergy_count; i++) {
+            printf("%s", member->allergies[i]);
+            if (i < member->allergy_count - 1) printf(", ");
+        }
+        printf("\n");
+    }
+    printf("--------------------------------------------------\n");
+
+    for (int day = 0; day < DAYS_IN_WEEK; day++) {
+        printf("\n%s:\n", days_of_week[day]);
+        for (int meal = 0; meal < MEALS_PER_DAY; meal++) {
+            printf("\n%s: %s (%d calories)\n", 
+                   meals_of_day[meal], 
+                   member->weekly_menu[day][meal].name,
+                   member->weekly_menu[day][meal].calories);
+            
+            printf("Ingredients: ");
+            for (int i = 0; i < member->weekly_menu[day][meal].ingredient_count; i++) {
+                if (!member->weekly_menu[day][meal].ingredients[i].allowed) {
+                    printf("[X]%s", member->weekly_menu[day][meal].ingredients[i].name);
+                } else {
+                    printf("%s", member->weekly_menu[day][meal].ingredients[i].name);
+                }
+                if (i < member->weekly_menu[day][meal].ingredient_count - 1) printf(", ");
+            }
+            printf("\n");
+        }
+        printf("--------------------------------------------------\n");
+    }
+}
+
+void physicalStrengthMenu() {
+    const char *menu_items[] = {
+        "Enter Physical Condition",
+        "View Physical Condition",
+        "Set Workout Routine",
+        "View Workout Routine",
+        "Set Diet Plan",
+        "View Diet Plan",
+        "Return to Main Menu"
+    };
+    const int menu_count = sizeof(menu_items) / sizeof(menu_items[0]);
+
+    int choice;
+    do {
+        printf("\nPhysical Strength & Knowledge Menu:\n");
+        for (int i = 0; i < menu_count; i++) {
+            printf("%c. %s\n", 'A' + i, menu_items[i]);
+        }
+        printf("Enter your choice: ");
+
+        choice = toupper(getchar());
+        getchar(); // consume newline
+
+        switch (choice) {
+            case 'A':
+                // enterPhysicalCondition();
+                break;
+            case 'B':
+                // viewPhysicalCondition();
+                break;
+            case 'C':
+                // setExerciseRoutine();
+                break;
+            case 'D':
+                // getExerciseRoutine();
+                break;
+            case 'E':
+                setDietPlan();
+                break;
+            case 'F':
+                viewDietPlan();
+                break;
+            case 'G':
+                printf("Returning to main menu.\n");
+                break;
+            default:
+                printf("Invalid choice. Please try again.\n");
+        }
+    } while (choice != 'G');
+}
+
+void addSampleMembers() {
+    // Member 1: Flexitarian
+    strcpy(milliways_members[0].name, "Arthur Dent");
+    strcpy(milliways_members[0].nickname, "Earthman");
+    milliways_members[0].diet_type = FLEXITARIAN;
+    strcpy(milliways_members[0].allergies[0], "Peanuts");
+    milliways_members[0].allergy_count = 1;
+    member_count++;
+
+    // Member 2: Vegan
+    strcpy(milliways_members[1].name, "Ford Prefect");
+    strcpy(milliways_members[1].nickname, "Betelgeusian");
+    milliways_members[1].diet_type = VEGAN;
+    milliways_members[1].allergy_count = 0;
+    member_count++;
+
+    // Member 3: Omnivore
+    strcpy(milliways_members[2].name, "Zaphod Beeblebrox");
+    strcpy(milliways_members[2].nickname, "President");
+    milliways_members[2].diet_type = OMNIVORE;
+    strcpy(milliways_members[2].allergies[0], "Shellfish");
+    strcpy(milliways_members[2].allergies[1], "Gluten");
+    milliways_members[2].allergy_count = 2;
+    member_count++;
+}
+
+int main() {
+    addSampleMembers();
+
+    int choice;
+    do {
+        printf("\nMilliways Fitness Club Main Menu:\n");
+        printf("1. Physical Strength & Knowledge\n");
+        printf("2. Mental Strength & Knowledge\n");
+        printf("3. Exit\n");
+        printf("Enter your choice: ");
+
+        scanf("%d", &choice);
+        getchar(); // consume newline
+
+        switch (choice) {
+            case 1:
+                physicalStrengthMenu();
+                break;
+            case 2:
+                // mentalStrengthMenu();
+                break;
+            case 3:
+                printf("Exiting program. Thanks for using Milliways Fitness Club!\n");
+                break;
+            default:
+                printf("Invalid choice. Please try again.\n");
+        }
+    } while (choice != 3);
+
+    return 0;
+}
