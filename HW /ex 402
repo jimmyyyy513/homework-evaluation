@@ -1,0 +1,367 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#define MAX_QUESTIONS 5
+#define MAX_ATTEMPTS 3
+#define MAX_RESULTS 100
+
+typedef struct {
+    char hangul[4];      // Hangul jamo UTF-8 string
+    char engAlpha[3];    // English alphabet equivalent
+    char engPron[20];    // English pronunciation
+    char type;           // 'C' for consonant, 'V' for vowel
+} HangulJamo;
+
+typedef struct {
+    char name[50];
+    char challengeType[3]; // "KE" or "EK"
+    int totalScore;
+    int attemptCount;
+} FlashcardResult;
+
+// 14 consonants (sample)
+HangulJamo consonants[] = {
+    {"ㄱ", "g", "giyeok", 'C'},
+    {"ㄴ", "n", "nieun", 'C'},
+    {"ㄷ", "d", "digeut", 'C'},
+    {"ㄹ", "r", "rieul", 'C'},
+    {"ㅁ", "m", "mieum", 'C'},
+    {"ㅂ", "b", "bieup", 'C'},
+    {"ㅅ", "s", "siot", 'C'},
+    {"ㅇ", "ng", "ieung", 'C'},
+    {"ㅈ", "j", "jieut", 'C'},
+    {"ㅊ", "ch", "chieut", 'C'},
+    {"ㅋ", "k", "kieuk", 'C'},
+    {"ㅌ", "t", "tieut", 'C'},
+    {"ㅍ", "p", "pieup", 'C'},
+    {"ㅎ", "h", "hieut", 'C'}
+};
+
+// 10 vowels (sample)
+HangulJamo vowels[] = {
+    {"ㅏ", "a", "ah", 'V'},
+    {"ㅑ", "ya", "yah", 'V'},
+    {"ㅓ", "eo", "uh", 'V'},
+    {"ㅕ", "yeo", "yuh", 'V'},
+    {"ㅗ", "o", "oh", 'V'},
+    {"ㅛ", "yo", "yoh", 'V'},
+    {"ㅜ", "u", "oo", 'V'},
+    {"ㅠ", "yu", "yoo", 'V'},
+    {"ㅡ", "eu", "eu", 'V'},
+    {"ㅣ", "i", "ee", 'V'}
+};
+
+FlashcardResult results[MAX_RESULTS];
+int resultsCount = 0;
+
+// Forward declarations
+void learnHangul();
+void playKor2EngGame(const char* learnerName);
+void playEng2KorGame(const char* learnerName);
+void showResult();
+int selectConsonantOrVowel();
+void clearInputBuffer();
+int findResultIndex(const char* name, const char* challengeType);
+
+int main() {
+    srand((unsigned int)time(NULL));
+    learnHangul();
+    return 0;
+}
+
+void learnHangul() {
+    char learnerName[50];
+    int menuChoice;
+
+    printf("\n=== Hangul Jamo Learning System ===\n");
+    printf("Enter the name of a Millieways trainee: ");
+    if (fgets(learnerName, sizeof(learnerName), stdin) == NULL) {
+        printf("Input error.\n");
+        return;
+    }
+    // Remove trailing newline
+    learnerName[strcspn(learnerName, "\n")] = 0;
+    if (strlen(learnerName) == 0) {
+        printf("No name entered. Returning to previous menu.\n");
+        return;
+    }
+
+    while (1) {
+        printf("\nHello, %s! Choose an option:\n", learnerName);
+        printf("1. Hangul to English\n");
+        printf("2. English to Hangul\n");
+        printf("3. View Results\n");
+        printf("Any other key: Return to previous menu\n");
+        printf("Select: ");
+
+        if (scanf("%d", &menuChoice) != 1) {
+            clearInputBuffer();
+            printf("Returning to previous menu.\n");
+            break;
+        }
+        clearInputBuffer();
+
+        switch (menuChoice) {
+            case 1:
+                playKor2EngGame(learnerName);
+                break;
+            case 2:
+                playEng2KorGame(learnerName);
+                break;
+            case 3:
+                showResult();
+                break;
+            default:
+                printf("Returning to previous menu.\n");
+                return;
+        }
+    }
+}
+
+int selectConsonantOrVowel() {
+    int choice;
+    printf("\nChoose learning type:\n");
+    printf("1. Consonants\n");
+    printf("2. Vowels\n");
+    printf("3. Both\n");
+    printf("Select: ");
+    if (scanf("%d", &choice) != 1) {
+        clearInputBuffer();
+        return 0;
+    }
+    clearInputBuffer();
+    if (choice < 1 || choice > 3) return 0;
+    return choice;
+}
+
+void playKor2EngGame(const char* learnerName) {
+    // Challenge type = KE
+    int learningType = selectConsonantOrVowel();
+    if (learningType == 0) {
+        printf("Invalid selection. Returning to menu.\n");
+        return;
+    }
+
+    HangulJamo *pool = NULL;
+    int poolSize = 0;
+
+    if (learningType == 1) {
+        pool = consonants;
+        poolSize = sizeof(consonants) / sizeof(consonants[0]);
+    } else if (learningType == 2) {
+        pool = vowels;
+        poolSize = sizeof(vowels) / sizeof(vowels[0]);
+    } else {
+        // Both consonants and vowels
+        static HangulJamo combined[24]; // 14 + 10 = 24 max
+        memcpy(combined, consonants, sizeof(consonants));
+        memcpy(combined + (sizeof(consonants)/sizeof(consonants[0])), vowels, sizeof(vowels));
+        pool = combined;
+        poolSize = 24;
+    }
+
+    int askedIndices[MAX_QUESTIONS];
+    int askedCount = 0;
+    int score = 0;
+
+    printf("\nHangul to English Quiz (5 questions):\n");
+
+    while (askedCount < MAX_QUESTIONS) {
+        int idx = rand() % poolSize;
+
+        // Ensure uniqueness
+        int unique = 1;
+        for (int i = 0; i < askedCount; i++) {
+            if (askedIndices[i] == idx) {
+                unique = 0;
+                break;
+            }
+        }
+        if (!unique) continue;
+
+        askedIndices[askedCount++] = idx;
+
+        char answerAlpha[10], answerPron[30];
+        printf("\nQuestion %d: What is the English alphabet and pronunciation of '%s'?\n", askedCount, pool[idx].hangul);
+        printf("Enter (alphabet,pronunciation) separated by comma: ");
+        if (fgets(answerAlpha, sizeof(answerAlpha), stdin) == NULL) {
+            printf("Input error.\n");
+            continue;
+        }
+
+        // Remove newline and split input by comma
+        answerAlpha[strcspn(answerAlpha, "\n")] = 0;
+        char *commaPos = strchr(answerAlpha, ',');
+        if (!commaPos) {
+            printf("Invalid format. Correct format is alphabet,pronunciation\n");
+            continue;
+        }
+        *commaPos = 0;
+        char *alphaInput = answerAlpha;
+        char *pronInput = commaPos + 1;
+
+        // Trim spaces if any
+        while (*alphaInput == ' ') alphaInput++;
+        while (*pronInput == ' ') pronInput++;
+
+        // Compare ignoring case for alphabet, exact for pronunciation
+        if (strcasecmp(alphaInput, pool[idx].engAlpha) == 0 && strcasecmp(pronInput, pool[idx].engPron) == 0) {
+            printf("Correct!\n");
+            score += 10;
+        } else {
+            printf("Incorrect. Correct answer: %s, %s\n", pool[idx].engAlpha, pool[idx].engPron);
+        }
+    }
+
+    // Update results
+    int resIndex = findResultIndex(learnerName, "KE");
+    if (resIndex == -1) {
+        if (resultsCount < MAX_RESULTS) {
+            resIndex = resultsCount++;
+            strncpy(results[resIndex].name, learnerName, sizeof(results[resIndex].name)-1);
+            strcpy(results[resIndex].challengeType, "KE");
+            results[resIndex].totalScore = 0;
+            results[resIndex].attemptCount = 0;
+        } else {
+            printf("Result storage full.\n");
+            return;
+        }
+    }
+
+    if (results[resIndex].attemptCount >= MAX_ATTEMPTS) {
+        printf("Maximum attempts reached for this challenge.\n");
+        return;
+    }
+
+    results[resIndex].attemptCount++;
+    results[resIndex].totalScore += score;
+
+    printf("\nAttempt %d score: %d / %d\n", results[resIndex].attemptCount, score, MAX_QUESTIONS * 10);
+}
+
+void playEng2KorGame(const char* learnerName) {
+    // Challenge type = EK
+    int learningType = selectConsonantOrVowel();
+    if (learningType == 0) {
+        printf("Invalid selection. Returning to menu.\n");
+        return;
+    }
+
+    HangulJamo *pool = NULL;
+    int poolSize = 0;
+
+    if (learningType == 1) {
+        pool = consonants;
+        poolSize = sizeof(consonants) / sizeof(consonants[0]);
+    } else if (learningType == 2) {
+        pool = vowels;
+        poolSize = sizeof(vowels) / sizeof(vowels[0]);
+    } else {
+        static HangulJamo combined[24];
+        memcpy(combined, consonants, sizeof(consonants));
+        memcpy(combined + (sizeof(consonants)/sizeof(consonants[0])), vowels, sizeof(vowels));
+        pool = combined;
+        poolSize = 24;
+    }
+
+    int askedIndices[MAX_QUESTIONS];
+    int askedCount = 0;
+    int score = 0;
+
+    printf("\nEnglish to Hangul Quiz (5 questions):\n");
+
+    while (askedCount < MAX_QUESTIONS) {
+        int idx = rand() % poolSize;
+
+        // Ensure uniqueness
+        int unique = 1;
+        for (int i = 0; i < askedCount; i++) {
+            if (askedIndices[i] == idx) {
+                unique = 0;
+                break;
+            }
+        }
+        if (!unique) continue;
+
+        askedIndices[askedCount++] = idx;
+
+        char answer[10];
+        printf("\nQuestion %d: What is the Hangul character for '%s (%s)'?\n",
+               askedCount, pool[idx].engAlpha, pool[idx].engPron);
+        printf("Enter Hangul character: ");
+        if (fgets(answer, sizeof(answer), stdin) == NULL) {
+            printf("Input error.\n");
+            continue;
+        }
+        answer[strcspn(answer, "\n")] = 0;
+
+        if (strcmp(answer, pool[idx].hangul) == 0) {
+            printf("Correct!\n");
+            score += 10;
+        } else {
+            printf("Incorrect. Correct answer: %s\n", pool[idx].hangul);
+        }
+    }
+
+    int resIndex = findResultIndex(learnerName, "EK");
+    if (resIndex == -1) {
+        if (resultsCount < MAX_RESULTS) {
+            resIndex = resultsCount++;
+            strncpy(results[resIndex].name, learnerName, sizeof(results[resIndex].name)-1);
+            strcpy(results[resIndex].challengeType, "EK");
+            results[resIndex].totalScore = 0;
+            results[resIndex].attemptCount = 0;
+        } else {
+            printf("Result storage full.\n");
+            return;
+        }
+    }
+
+    if (results[resIndex].attemptCount >= MAX_ATTEMPTS) {
+        printf("Maximum attempts reached for this challenge.\n");
+        return;
+    }
+
+    results[resIndex].attemptCount++;
+    results[resIndex].totalScore += score;
+
+    printf("\nAttempt %d score: %d / %d\n", results[resIndex].attemptCount, score, MAX_QUESTIONS * 10);
+}
+
+void showResult() {
+    if (resultsCount == 0) {
+        printf("\nNo results available.\n");
+        return;
+    }
+
+    // Sort by challengeType ascending ("EK" < "KE")
+    for (int i = 0; i < resultsCount - 1; i++) {
+        for (int j = i + 1; j < resultsCount; j++) {
+            if (strcmp(results[i].challengeType, results[j].challengeType) > 0) {
+                FlashcardResult temp = results[i];
+                results[i] = results[j];
+                results[j] = temp;
+            }
+        }
+    }
+
+    printf("\n=== Flashcard Game Results ===\n");
+    printf("%-20s %-6s %-12s %-10s\n", "Name", "Type", "Avg Score", "Attempts");
+    for (int i = 0; i < resultsCount; i++) {
+        int avgScore = 0;
+        if (results[i].attemptCount > 0)
+            avgScore = results[i].totalScore / results[i].attemptCount;
+
+        printf("%-20s %-6s %-12d %-10d\n",
+               results[i].name,
+               results[i].challengeType,
+               avgScore,
+               results[i].attemptCount);
+    }
+}
+
+// Find result index for given name and challenge type, -1 if not found
+int findResultIndex(const char* name, const char* challengeType) {
+    for (int
