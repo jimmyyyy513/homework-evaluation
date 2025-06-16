@@ -1,0 +1,172 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#define MAX_TRAINEES 20
+#define MAX_MENTORS 8
+#define NAME_LENGTH 50
+
+typedef struct {
+    char nickname[NAME_LENGTH];
+    int id;         // parsed ASCII sum
+    int ability;    // 100–1000
+    int mentorID;   // matched mentor ID
+} Trainee;
+
+typedef struct {
+    int id;                     // 1 to 8
+    char name[NAME_LENGTH];
+    int assignedMenteeIndex;    // index of matched trainee
+} Mentor;
+
+Trainee trainees[MAX_TRAINEES];
+Mentor mentors[MAX_MENTORS];
+int traineeCount = 0;
+int mentorCount = 0;
+
+// Function prototypes
+int parseIntMember(const char *name);
+int getRandomAbility();
+void initTrainees();
+void inputMentors();
+void matchMentoring();
+void printMentorMatches();
+
+// Menu
+void runMenu() {
+    int choice;
+    while (1) {
+        printf("\n=== Self-Management and Teamwork ===\n");
+        printf("1. Initialize Trainees\n");
+        printf("2. Input Mentors\n");
+        printf("3. Match Mentoring\n");
+        printf("4. Print Mentor Matches\n");
+        printf("0. Exit\n");
+        printf("Select menu: ");
+        scanf("%d", &choice);
+        getchar(); // clear newline
+
+        switch (choice) {
+            case 1: initTrainees(); break;
+            case 2: inputMentors(); break;
+            case 3: matchMentoring(); break;
+            case 4: printMentorMatches(); break;
+            case 0: return;
+            default: printf("Invalid option.\n");
+        }
+    }
+}
+
+// Convert nickname to ASCII sum
+int parseIntMember(const char *name) {
+    int sum = 0;
+    while (*name) {
+        sum += (int)(*name++);
+    }
+    return sum;
+}
+
+// Random ability value (100–1000)
+int getRandomAbility() {
+    return 100 + rand() % 901; // 100 to 1000
+}
+
+// Initialize trainees
+void initTrainees() {
+    printf("\nEnter number of trainees (max %d): ", MAX_TRAINEES);
+    scanf("%d", &traineeCount);
+    getchar();
+
+    if (traineeCount > MAX_TRAINEES) {
+        traineeCount = MAX_TRAINEES;
+    }
+
+    for (int i = 0; i < traineeCount; i++) {
+        printf("Enter nickname for trainee %d: ", i + 1);
+        fgets(trainees[i].nickname, NAME_LENGTH, stdin);
+        strtok(trainees[i].nickname, "\n");
+
+        trainees[i].id = parseIntMember(trainees[i].nickname);
+        trainees[i].ability = getRandomAbility();
+        trainees[i].mentorID = -1; // not assigned yet
+    }
+
+    printf("Trainees initialized.\n");
+}
+
+// Input mentors (up to 8)
+void inputMentors() {
+    printf("\nEnter number of mentors (max %d): ", MAX_MENTORS);
+    scanf("%d", &mentorCount);
+    getchar();
+
+    if (mentorCount > MAX_MENTORS) {
+        mentorCount = MAX_MENTORS;
+    }
+
+    for (int i = 0; i < mentorCount; i++) {
+        mentors[i].id = i + 1;
+        mentors[i].assignedMenteeIndex = -1;
+        printf("Enter name for mentor %d: ", mentors[i].id);
+        fgets(mentors[i].name, NAME_LENGTH, stdin);
+        strtok(mentors[i].name, "\n");
+    }
+
+    printf("Mentors registered.\n");
+}
+
+// Match trainees to mentors (1:1 using modulo logic)
+void matchMentoring() {
+    if (mentorCount == 0 || traineeCount == 0) {
+        printf("Please initialize both trainees and mentors first.\n");
+        return;
+    }
+
+    // Reset all mentor assignments
+    for (int i = 0; i < mentorCount; i++) {
+        mentors[i].assignedMenteeIndex = -1;
+    }
+
+    int usedMentor[MAX_MENTORS] = {0};
+
+    for (int i = 0; i < traineeCount; i++) {
+        int mentorIndex = i % mentorCount;
+
+        // Ensure 1:1 bonus match: no reused mentor
+        while (usedMentor[mentorIndex]) {
+            mentorIndex = (mentorIndex + 1) % mentorCount;
+        }
+
+        trainees[i].mentorID = mentors[mentorIndex].id;
+        mentors[mentorIndex].assignedMenteeIndex = i;
+        usedMentor[mentorIndex] = 1;
+    }
+
+    printf("Mentors matched to trainees (1:1).\n");
+}
+
+// Print matches
+void printMentorMatches() {
+    printf("\n=== Mentor–Trainee Matches ===\n");
+    for (int i = 0; i < mentorCount; i++) {
+        int idx = mentors[i].assignedMenteeIndex;
+        if (idx != -1) {
+            printf("Trainee %d (%s) [ID: %d] ↔ Mentor %d (%s)\n",
+                   idx + 1,
+                   trainees[idx].nickname,
+                   trainees[idx].id,
+                   mentors[i].id,
+                   mentors[i].name);
+        } else {
+            printf("Mentor %d (%s) has no assigned mentee.\n", mentors[i].id, mentors[i].name);
+        }
+    }
+}
+
+// Main
+int main() {
+    srand((unsigned int)time(NULL)); // seed RNG
+    runMenu();
+    return 0;
+}
