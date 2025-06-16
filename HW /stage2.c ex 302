@@ -1,0 +1,186 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#define MAX_MEMBERS 20
+#define MAX_NAME 50
+#define MAX_TRAUMA 200
+#define MAX_RESP 100
+#define MAX_QUESTIONS 5
+#define SESSION_QUESTIONS 3
+
+typedef struct {
+    char nickname[MAX_NAME];
+    int age;
+    char trauma[MAX_TRAUMA];
+    int hasTrauma;
+} Member;
+
+typedef struct {
+    int qid;
+    char question[MAX_RESP];
+} Question;
+
+typedef struct {
+    char nickname[MAX_NAME];
+    int qid;
+    char response[MAX_RESP];
+} Response;
+
+Member members[MAX_MEMBERS];
+int memberCount = 0;
+
+Question questions[MAX_QUESTIONS] = {
+    {1, "In what situations have you experienced this trauma?"},
+    {2, "How has this situation affected your daily life and emotions?"},
+    {3, "How have you tried to overcome this trauma?"},
+    {4, "What emotions do you associate with this trauma?"},
+    {5, "What kind of support do you think is necessary to overcome this trauma?"}
+};
+
+Response responses[MAX_MEMBERS * SESSION_QUESTIONS];
+int responseCount = 0;
+
+// Track sessions in process
+typedef struct {
+    char nickname[MAX_NAME];
+    int askedQids[SESSION_QUESTIONS];
+    int nextIndex;
+} Session;
+Session current = {"", {0}, 0};
+
+void pauseSession(const char *nick) {
+    strcpy(current.nickname, nick);
+    current.nextIndex = 0;
+}
+
+void loadMembers() {
+    // Hardcode or load from previous assignment; here sample
+    memberCount = 3;
+    strcpy(members[0].nickname, "Ariel"); members[0].age = 21; members[0].hasTrauma = 0;
+    strcpy(members[1].nickname, "Benji"); members[1].age = 22; members[1].hasTrauma = 0;
+    strcpy(members[2].nickname, "Clara"); members[2].age = 20; members[2].hasTrauma = 0;
+}
+
+Member* findMember(const char *nick) {
+    for (int i = 0; i < memberCount; i++)
+        if (strcmp(members[i].nickname, nick) == 0) return &members[i];
+    return NULL;
+}
+
+void inputTrauma() {
+    char nick[MAX_NAME], desc[MAX_TRAUMA];
+    while (1) {
+        printf("Enter nickname (or 'exit'): ");
+        fgets(nick, MAX_NAME, stdin);
+        nick[strcspn(nick, "\n")] = 0;
+        if (strcasecmp(nick, "exit") == 0) break;
+
+        Member *m = findMember(nick);
+        if (!m) {
+            printf("No such member.\n");
+            continue;
+        }
+        printf("Enter trauma description: ");
+        fgets(desc, MAX_TRAUMA, stdin);
+        desc[strcspn(desc, "\n")] = 0;
+        strcpy(m->trauma, desc[0] ? desc : m->trauma);
+        m->hasTrauma = desc[0] ? 1 : m->hasTrauma;
+        printf("Saved.\n");
+    }
+}
+
+void startCounseling() {
+    if (strlen(current.nickname)) {
+        printf("Resuming session with %s.\n", current.nickname);
+    } else {
+        char nick[MAX_NAME];
+        printf("Select nickname for counseling: ");
+        fgets(nick, MAX_NAME, stdin);
+        nick[strcspn(nick, "\n")] = 0;
+        Member *m = findMember(nick);
+        if (!m || !m->hasTrauma) { printf("Invalid.\n"); return; }
+        strcpy(current.nickname, nick);
+        // pick random unique question IDs
+        for (int i = 0; i < SESSION_QUESTIONS; i++) {
+            int rid;
+            do { rid = rand() % MAX_QUESTIONS; } while (
+                i>0 && (rid == current.askedQids[0] || (i>1 && rid == current.askedQids[1]))
+            );
+            current.askedQids[i] = questions[rid].qid;
+        }
+        current.nextIndex = 0;
+    }
+    while (current.nextIndex < SESSION_QUESTIONS) {
+        int qid = current.askedQids[current.nextIndex];
+        Question *q = NULL;
+        for (int i = 0; i < MAX_QUESTIONS; i++)
+            if (questions[i].qid == qid) q = &questions[i];
+        char resp[MAX_RESP];
+        do {
+            printf("%s\n", q->question);
+            fgets(resp, MAX_RESP, stdin);
+            resp[strcspn(resp, "\n")] = 0;
+        } while (resp[0]==0 || strlen(resp)>MAX_RESP-1);
+        strcpy(responses[responseCount].nickname, current.nickname);
+        responses[responseCount].qid = qid;
+        strcpy(responses[responseCount].response, resp);
+        responseCount++;
+        current.nextIndex++;
+    }
+    printf("Counseling done for %s.\n", current.nickname);
+    current.nickname[0]=0;
+}
+
+void viewCounselingSummary() {
+    printf("Counseled members:\n");
+    for (int i = 0; i < memberCount; i++) {
+        if (!members[i].hasTrauma) continue;
+        int found = 0;
+        for (int r = 0; r < responseCount; r++)
+            if (strcmp(responses[r].nickname, members[i].nickname) == 0) {
+                found = 1; break;
+            }
+        if (found) printf("- %s\n", members[i].nickname);
+    }
+    char nick[MAX_NAME];
+    printf("View which? ");
+    fgets(nick, MAX_NAME, stdin);
+    nick[strcspn(nick, "\n")] = 0;
+    Member *m = findMember(nick);
+    if (!m) return;
+    printf("Nickname: %s\nTrauma: %s\n", m->nickname, m->trauma);
+    for (int r = 0; r < responseCount; r++) {
+        if (strcmp(responses[r].nickname, nick) == 0) {
+            Question *q = NULL;
+            for (int i=0;i<MAX_QUESTIONS;i++)
+                if (questions[i].qid == responses[r].qid) q=&questions[i];
+            printf("%s\n-> %s\n", q->question, responses[r].response);
+        }
+    }
+}
+
+void menu() {
+    char sel[10];
+    while (1) {
+        printf("\nB. Trauma Management\n");
+        printf("1. Input Trauma Data\n");
+        printf("2. Counseling Session\n");
+        printf("3. View Counseling Summary\n");
+        printf("0. Exit\n");
+        printf("Select: ");
+        fgets(sel,10,stdin);
+        if (sel[0]=='0') break;
+        else if (sel[0]=='1') inputTrauma();
+        else if (sel[0]=='2') startCounseling();
+        else if (sel[0]=='3') viewCounselingSummary();
+    }
+}
+
+int main() {
+    srand((unsigned)time(NULL));
+    loadMembers();
+    menu();
+    return 0;
+}
