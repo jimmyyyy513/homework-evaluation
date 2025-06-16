@@ -1,0 +1,123 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#define MAX_TRAINEES 5
+#define MAX_SENTENCES 10
+#define MAX_WORDS 20
+#define MAX_NICKNAME_LEN 30
+#define MAX_QUESTIONS 5
+#define MAX_ATTEMPTS 3
+
+typedef struct {
+    char eng[200];
+    char korWords[MAX_WORDS][30];  // Korean sentence words, min 6 words
+    int korWordCount;
+} EngKorSentence;
+
+typedef struct {
+    char nickname[MAX_NICKNAME_LEN];
+    int grammarScore;
+    int attempted;  // flag if learner took composeSentences
+} Trainee;
+
+EngKorSentence sentenceBank[MAX_SENTENCES] = {
+    {"I like to eat apples.", {"나는", "사과를", "먹는", "것을", "좋아한다"}, 5},
+    {"She is reading a book now.", {"그녀는", "지금", "책을", "읽고", "있다"}, 5},
+    {"We will go to the park tomorrow.", {"우리는", "내일", "공원에", "갈", "것이다"}, 5},
+    {"They are playing soccer outside.", {"그들은", "밖에서", "축구를", "하고", "있다"}, 5},
+    {"He speaks Korean very well.", {"그는", "한국어를", "매우", "잘", "한다"}, 5},
+    {"I am studying C programming.", {"나는", "C", "프로그래밍을", "공부하고", "있다"}, 5},
+    {"The weather is nice today.", {"오늘은", "날씨가", "좋다"}, 3},
+    {"My friend is a good singer.", {"내", "친구는", "좋은", "가수이다"}, 4},
+    {"Please open the window.", {"창문을", "열어", "주세요"}, 3},
+    {"We are watching a movie.", {"우리는", "영화를", "보고", "있다"}, 4}
+};
+
+Trainee trainees[MAX_TRAINEES] = {
+    {"alice", 0, 0},
+    {"bob", 0, 0},
+    {"charlie", 0, 0},
+    {"david", 0, 0},
+    {"eve", 0, 0}
+};
+
+// Function prototypes
+void learnKoreanGrammar();
+void composeSentences(Trainee *learner);
+void shuffleWords(char words[][30], int n);
+void quickSort(char arr[][30], int low, int high);
+int partition(char arr[][30], int low, int high);
+void printScore(Trainee *learner);
+int findTraineeIndex(const char *nickname);
+void selectionSort(char arr[][30], int n);
+
+int main() {
+    srand((unsigned int)time(NULL));
+    learnKoreanGrammar();
+    return 0;
+}
+
+void learnKoreanGrammar() {
+    char nickname[MAX_NICKNAME_LEN];
+    int attempts = 0;
+    int idx = -1;
+
+    printf("=== Korean Grammar Learning ===\n");
+    while (attempts < MAX_ATTEMPTS) {
+        printf("Enter your nickname: ");
+        if (!fgets(nickname, sizeof(nickname), stdin)) {
+            printf("Input error.\n");
+            return;
+        }
+        nickname[strcspn(nickname, "\n")] = 0; // remove newline
+
+        idx = findTraineeIndex(nickname);
+        if (idx != -1) break;
+
+        printf("Nickname not found. Try again.\n");
+        attempts++;
+    }
+
+    if (idx == -1) {
+        printf("Failed to find valid nickname. Exiting.\n");
+        return;
+    }
+
+    Trainee *learner = &trainees[idx];
+
+    while (1) {
+        printf("\nWelcome, %s! Select an option:\n", learner->nickname);
+        printf("1. Compose Korean Sentences\n");
+        printf("2. Check Scores\n");
+        printf("Any other key: Exit\n");
+        printf("Choice: ");
+
+        char choice[10];
+        if (!fgets(choice, sizeof(choice), stdin)) break;
+
+        int c = atoi(choice);
+        if (c == 1) {
+            composeSentences(learner);
+        } else if (c == 2) {
+            if (!learner->attempted) {
+                printf("You must attempt 'Compose Korean Sentences' first before checking scores.\n");
+            } else {
+                printScore(learner);
+            }
+        } else {
+            printf("Exiting Korean grammar learning.\n");
+            break;
+        }
+    }
+}
+
+void composeSentences(Trainee *learner) {
+    int askedIndices[MAX_QUESTIONS] = { -1 };
+    int questionsAsked = 0;
+    int score = 0;
+
+    printf("\n--- Compose Korean Sentences Quiz ---\n");
+    while (questionsAsked < MAX_QUESTIONS) {
+        int idx = r
